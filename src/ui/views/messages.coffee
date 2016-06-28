@@ -208,14 +208,8 @@ formatters = [
         if !matches
             return
         data = preloadTweet matches[1] + matches[3]
-        if !data
-            return
-        div class:'tweet', ->
-            if data.text
-                p ->
-                    data.text
-            if data.imageUrl and preload data.imageUrl
-                img src: data.imageUrl
+        if data and data.text
+            pass data.text
 ]
 
 stripProxiedColon = (txt) ->
@@ -244,18 +238,15 @@ preloadTweet = (href) ->
     cache = preload_cache[href]
     if not cache
         preload_cache[href] = {}
-        fetch href
+        twitterEndPoint = 'https://api.twitter.com/1/statuses/oembed.json?url=' + encodeURIComponent href
+        fetch twitterEndPoint
         .then (response) ->
-            response.text()
-        .then (html) ->
-            frag = document.createElement 'div'
-            frag.innerHTML = html
-            container = frag.querySelector '[data-associated-tweet-id]'
-            textNode = container.querySelector ('.tweet-text')
-            image = container.querySelector ('[data-image-url]')
-            preload_cache[href].text = textNode.textContent
-            preload_cache[href].imageUrl = image?.dataset.imageUrl
-            later -> action 'loadedtweet'
+            if response.ok
+                response.text()
+        .then (json) ->
+            if json
+                preload_cache[href].text = JSON.parse(json).html
+                later -> action 'loadedtweet'
     return cache
 
 formatAttachment = (att) ->
